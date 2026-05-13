@@ -1,0 +1,15 @@
+package com.Ishwarjit.Wolf_OVRN_backend.repository;
+
+import com.Ishwarjit.Wolf_OVRN_backend.entity.User;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, UUID> {
+
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
+
+    Optional<User> findByEmail(String email);
+}

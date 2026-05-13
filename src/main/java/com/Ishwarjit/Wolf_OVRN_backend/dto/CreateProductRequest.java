@@ -1,0 +1,39 @@
+package com.Ishwarjit.Wolf_OVRN_backend.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class CreateProductRequest {
+
+    @NotBlank
+    @Size(max = 255)
+    private String name;
+
+    @NotBlank
+    @Size(max = 255)
+    private String slug;
+
+    private String description;
+
+    @NotNull
+    @DecimalMin(value = "0.00", inclusive = true)
+    private BigDecimal basePrice;
+
+    @DecimalMin(value = "0.00", inclusive = true)
+    private BigDecimal compareAtPrice;
+
+    @NotNull
+    @Min(0)
+    private Integer stockQuantity;
+
+    private UUID categoryId;
+}
