@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify - graphify-out/graph.html</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: #1a1a2e; border-left: 1px solid #2a2a4e; display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid #2a2a4e; }
+  #search { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid #2a2a4e; display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: #2a2a4e; }
+  #info-panel { padding: 14px; border-bottom: 1px solid #2a2a4e; min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: #ccc; line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: #e0e0e0; }
+  #info-content .empty { color: #555; font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #333; }
+  .neighbor-link:hover { background: #2a2a4e; }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: #aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: #2a2a4e; padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: #666; font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid #2a2a4e; font-size: 11px; color: #555; }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #aaa; user-select: none; }
+  #legend-controls label:hover { color: #e0e0e0; }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+</style>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">31 nodes &middot; 32 edges &middot; 7 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "src_main_java_com_ishwarjit_wolf_ovrn_backend_wolfovrnbackendapplication_java", "label": "WolfOvrnBackendApplication.java", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WolfOvrnBackendApplication.java", "community": 3, "community_name": "Application Entrypoint", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplication.java", "file_type": "code", "degree": 1}, {"id": "wolf_ovrn_backend_wolfovrnbackendapplication_wolfovrnbackendapplication", "label": "WolfOvrnBackendApplication", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WolfOvrnBackendApplication", "community": 3, "community_name": "Application Entrypoint", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplication.java", "file_type": "code", "degree": 2}, {"id": "wolf_ovrn_backend_wolfovrnbackendapplication_wolfovrnbackendapplication_main", "label": ".main()", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": ".main()", "community": 3, "community_name": "Application Entrypoint", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplication.java", "file_type": "code", "degree": 1}, {"id": "src_main_java_com_ishwarjit_wolf_ovrn_backend_config_securityconfig_java", "label": "SecurityConfig.java", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "SecurityConfig.java", "community": 4, "community_name": "Security Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/config/SecurityConfig.java", "file_type": "code", "degree": 1}, {"id": "config_securityconfig_securityconfig", "label": "SecurityConfig", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "SecurityConfig", "community": 4, "community_name": "Security Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/config/SecurityConfig.java", "file_type": "code", "degree": 2}, {"id": "config_securityconfig_securityconfig_securityfilterchain", "label": ".securityFilterChain()", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": ".securityFilterChain()", "community": 4, "community_name": "Security Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/config/SecurityConfig.java", "file_type": "code", "degree": 1}, {"id": "src_test_java_com_ishwarjit_wolf_ovrn_backend_wolfovrnbackendapplicationtests_java", "label": "WolfOvrnBackendApplicationTests.java", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WolfOvrnBackendApplicationTests.java", "community": 5, "community_name": "Smoke Test", "source_file": "src/test/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplicationTests.java", "file_type": "code", "degree": 1}, {"id": "wolf_ovrn_backend_wolfovrnbackendapplicationtests_wolfovrnbackendapplicationtests", "label": "WolfOvrnBackendApplicationTests", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WolfOvrnBackendApplicationTests", "community": 5, "community_name": "Smoke Test", "source_file": "src/test/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplicationTests.java", "file_type": "code", "degree": 2}, {"id": "wolf_ovrn_backend_wolfovrnbackendapplicationtests_wolfovrnbackendapplicationtests_contextloads", "label": ".contextLoads()", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": ".contextLoads()", "community": 5, "community_name": "Smoke Test", "source_file": "src/test/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplicationTests.java", "file_type": "code", "degree": 1}, {"id": "wolfovrnbackendapplication_main", "label": "WolfOvrnBackendApplication (Spring Boot entrypoint)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "WolfOvrnBackendApplication (Spring Boot entrypoint)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplication.java", "file_type": "code", "degree": 5}, {"id": "securityconfig_security_filter_chain", "label": "SecurityConfig.securityFilterChain bean", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 28.0, "font": {"size": 12, "color": "#ffffff"}, "title": "SecurityConfig.securityFilterChain bean", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/config/SecurityConfig.java", "file_type": "code", "degree": 3}, {"id": "securityconfig_permit_all_rationale", "label": "Permit-all + CSRF disabled (dev-stage open API)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Permit-all + CSRF disabled (dev-stage open API)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/java/com/Ishwarjit/Wolf_OVRN_backend/config/SecurityConfig.java", "file_type": "rationale", "degree": 1}, {"id": "v1initialschema_user_role_enum", "label": "user_role ENUM (USER/STAFF/MANAGER/ADMIN)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "user_role ENUM (USER/STAFF/MANAGER/ADMIN)", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 2}, {"id": "v1initialschema_order_status_enum", "label": "order_status ENUM", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "order_status ENUM", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 2}, {"id": "v1initialschema_users_table", "label": "users table (OAuth-based)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "users table (OAuth-based)", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 5}, {"id": "v1initialschema_categories_table", "label": "categories table (self-referencing tree)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "categories table (self-referencing tree)", "community": 2, "community_name": "Product Catalog Schema", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 4}, {"id": "v1initialschema_products_table", "label": "products table", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "products table", "community": 2, "community_name": "Product Catalog Schema", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 4}, {"id": "v1initialschema_product_images_table", "label": "product_images table", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "product_images table", "community": 2, "community_name": "Product Catalog Schema", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 1}, {"id": "v1initialschema_orders_table", "label": "orders table", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "orders table", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 5}, {"id": "v1initialschema_order_items_table", "label": "order_items table", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "order_items table", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 2}, {"id": "v1initialschema_update_modified_column_fn", "label": "update_modified_column() trigger function", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "update_modified_column() trigger function", "community": 2, "community_name": "Product Catalog Schema", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "code", "degree": 4}, {"id": "v1initialschema_oauth_only_user_rationale", "label": "OAuth-only user model (no password_hash, provider+provider_id unique)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "OAuth-only user model (no password_hash, provider+provider_id unique)", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "rationale", "degree": 1}, {"id": "v1initialschema_address_snapshot_jsonb_rationale", "label": "Address snapshot via JSONB (denormalized for historical accuracy)", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Address snapshot via JSONB (denormalized for historical accuracy)", "community": 1, "community_name": "User & Order Domain", "source_file": "src/main/resources/db/migration/V1__initial_schema.sql", "file_type": "rationale", "degree": 1}, {"id": "wolfovrnbackendapplicationtests_context_loads", "label": "contextLoads() smoke test", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "contextLoads() smoke test", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/test/java/com/Ishwarjit/Wolf_OVRN_backend/WolfOvrnBackendApplicationTests.java", "file_type": "code", "degree": 1}, {"id": "dockercompose_postgres_service", "label": "postgres:17 service (wolf-ovrn-postgres)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "postgres:17 service (wolf-ovrn-postgres)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "docker-compose.yml", "file_type": "code", "degree": 1}, {"id": "applicationyml_datasource", "label": "spring.datasource (env-driven Postgres)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "spring.datasource (env-driven Postgres)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/resources/application.yml", "file_type": "code", "degree": 2}, {"id": "applicationyml_flyway", "label": "spring.flyway config (baseline-on-migrate, classpath:db/migration)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "spring.flyway config (baseline-on-migrate, classpath:db/migration)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/resources/application.yml", "file_type": "code", "degree": 4}, {"id": "applicationyml_jpa_validate_rationale", "label": "JPA ddl-auto: validate (schema owned by Flyway, JPA only verifies)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "JPA ddl-auto: validate (schema owned by Flyway, JPA only verifies)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "src/main/resources/application.yml", "file_type": "rationale", "degree": 1}, {"id": "helpmd_package_rename_note", "label": "Package rename note (hyphen -> underscore)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Package rename note (hyphen -&gt; underscore)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "HELP.md", "file_type": "document", "degree": 1}, {"id": "helpmd_spring_boot_reference_docs", "label": "Spring Boot 4.0.6 reference docs (Web/JPA/Security/Flyway)", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Spring Boot 4.0.6 reference docs (Web/JPA/Security/Flyway)", "community": 0, "community_name": "Spring Boot Configuration", "source_file": "HELP.md", "file_type": "document", "degree": 2}, {"id": "readme_project_title", "label": "WOLF-OVRN--backend README", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "WOLF-OVRN--backend README", "community": 6, "community_name": "Project README", "source_file": "README.md", "file_type": "document", "degree": 0}];
+const RAW_EDGES = [{"from": "src_main_java_com_ishwarjit_wolf_ovrn_backend_wolfovrnbackendapplication_java", "to": "wolf_ovrn_backend_wolfovrnbackendapplication_wolfovrnbackendapplication", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "wolf_ovrn_backend_wolfovrnbackendapplication_wolfovrnbackendapplication", "to": "wolf_ovrn_backend_wolfovrnbackendapplication_wolfovrnbackendapplication_main", "label": "method", "title": "method [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "src_main_java_com_ishwarjit_wolf_ovrn_backend_config_securityconfig_java", "to": "config_securityconfig_securityconfig", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "config_securityconfig_securityconfig", "to": "config_securityconfig_securityconfig_securityfilterchain", "label": "method", "title": "method [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "src_test_java_com_ishwarjit_wolf_ovrn_backend_wolfovrnbackendapplicationtests_java", "to": "wolf_ovrn_backend_wolfovrnbackendapplicationtests_wolfovrnbackendapplicationtests", "label": "contains", "title": "contains [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "wolf_ovrn_backend_wolfovrnbackendapplicationtests_wolfovrnbackendapplicationtests", "to": "wolf_ovrn_backend_wolfovrnbackendapplicationtests_wolfovrnbackendapplicationtests_contextloads", "label": "method", "title": "method [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "wolfovrnbackendapplicationtests_context_loads", "to": "wolfovrnbackendapplication_main", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "wolfovrnbackendapplication_main", "to": "securityconfig_security_filter_chain", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "wolfovrnbackendapplication_main", "to": "applicationyml_datasource", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "wolfovrnbackendapplication_main", "to": "applicationyml_flyway", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "helpmd_package_rename_note", "to": "wolfovrnbackendapplication_main", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "securityconfig_permit_all_rationale", "to": "securityconfig_security_filter_chain", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "helpmd_spring_boot_reference_docs", "to": "securityconfig_security_filter_chain", "label": "cites", "title": "cites [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_users_table", "to": "v1initialschema_user_role_enum", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_user_role_enum", "to": "v1initialschema_order_status_enum", "label": "semantically_similar_to", "title": "semantically_similar_to [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "v1initialschema_orders_table", "to": "v1initialschema_order_status_enum", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_orders_table", "to": "v1initialschema_users_table", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_users_table", "to": "v1initialschema_update_modified_column_fn", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_oauth_only_user_rationale", "to": "v1initialschema_users_table", "label": "rationale_for", "title": "rationale_for [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "applicationyml_flyway", "to": "v1initialschema_users_table", "label": "references", "title": "references [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "v1initialschema_categories_table", "to": "v1initialschema_categories_table", "label": "shares_data_with", "title": "shares_data_with [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_products_table", "to": "v1initialschema_categories_table", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_categories_table", "to": "v1initialschema_update_modified_column_fn", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_product_images_table", "to": "v1initialschema_products_table", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_order_items_table", "to": "v1initialschema_products_table", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_products_table", "to": "v1initialschema_update_modified_column_fn", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_order_items_table", "to": "v1initialschema_orders_table", "label": "references", "title": "references [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_orders_table", "to": "v1initialschema_update_modified_column_fn", "label": "calls", "title": "calls [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "v1initialschema_address_snapshot_jsonb_rationale", "to": "v1initialschema_orders_table", "label": "rationale_for", "title": "rationale_for [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "applicationyml_datasource", "to": "dockercompose_postgres_service", "label": "shares_data_with", "title": "shares_data_with [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "applicationyml_jpa_validate_rationale", "to": "applicationyml_flyway", "label": "rationale_for", "title": "rationale_for [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "helpmd_spring_boot_reference_docs", "to": "applicationyml_flyway", "label": "cites", "title": "cites [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Spring Boot Configuration", "count": 10}, {"cid": 1, "color": "#F28E2B", "label": "User &amp; Order Domain", "count": 7}, {"cid": 2, "color": "#E15759", "label": "Product Catalog Schema", "count": 4}, {"cid": 3, "color": "#76B7B2", "label": "Application Entrypoint", "count": 3}, {"cid": 4, "color": "#59A14F", "label": "Security Configuration", "count": 3}, {"cid": 5, "color": "#EDC948", "label": "Smoke Test", "count": 3}, {"cid": 6, "color": "#B07AA1", "label": "Project README", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  _community: n.community, _community_name: n.community_name,
+  _source_file: n.source_file, _file_type: n.file_type, _degree: n.degree,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" onclick="focusNode(${JSON.stringify(nid)})">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  document.getElementById('info-content').innerHTML = `
+    <div class="field"><b>${esc(n.label)}</b></div>
+    <div class="field">Type: ${esc(n._file_type || 'unknown')}</div>
+    <div class="field">Community: ${esc(n._community_name)}</div>
+    <div class="field">Source: ${esc(n._source_file || '-')}</div>
+    <div class="field">Degree: ${n._degree}</div>
+    ${neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>` : ''}
+  `;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [{"id": "ecommerce_order_flow", "label": "E-commerce order flow (user places order with product line items)", "nodes": ["v1initialschema_users_table", "v1initialschema_orders_table", "v1initialschema_order_items_table", "v1initialschema_products_table"], "relation": "participate_in", "confidence": "INFERRED", "confidence_score": 0.9, "source_file": "src/main/resources/db/migration/V1__initial_schema.sql"}, {"id": "flyway_managed_schema_stack", "label": "Flyway-managed Postgres schema lifecycle (compose -> datasource -> migration -> JPA validate)", "nodes": ["dockercompose_postgres_service", "applicationyml_datasource", "applicationyml_flyway", "v1initialschema_users_table", "applicationyml_jpa_validate_rationale"], "relation": "form", "confidence": "INFERRED", "confidence_score": 0.9, "source_file": "src/main/resources/application.yml"}, {"id": "updated_at_trigger_pattern", "label": "updated_at auto-touch trigger pattern across mutable tables", "nodes": ["v1initialschema_update_modified_column_fn", "v1initialschema_users_table", "v1initialschema_categories_table", "v1initialschema_products_table", "v1initialschema_orders_table"], "relation": "implement", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main/resources/db/migration/V1__initial_schema.sql"}];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        const positions = h.nodes
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const expanded = positions.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

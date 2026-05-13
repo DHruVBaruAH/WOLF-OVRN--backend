@@ -1,0 +1,1 @@
+{"nodes": [{"id": "dockercompose_postgres_service", "label": "postgres:17 service (wolf-ovrn-postgres)", "file_type": "code", "source_file": "docker-compose.yml", "source_location": "lines 2-18", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
