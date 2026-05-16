@@ -55,6 +55,15 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public ProductDetailResponse getBySlug(String slug) {
+        Product product = productRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + slug));
+        List<ProductImage> images = productImageRepository
+                .findByProductIdOrderByDisplayOrderAsc(product.getId());
+        return ProductDetailResponse.from(product, images);
+    }
+
+    @Transactional(readOnly = true)
     public ProductDetailResponse getById(UUID id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));

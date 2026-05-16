@@ -49,9 +49,9 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok(productService.list(search, category, pageable)));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductDetailResponse>> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(productService.getById(id)));
+    @GetMapping("/{slug}")
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> get(@PathVariable String slug) {
+        return ResponseEntity.ok(ApiResponse.ok(productService.getBySlug(slug)));
     }
 
     @PostMapping
