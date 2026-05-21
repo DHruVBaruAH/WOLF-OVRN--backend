@@ -55,10 +55,28 @@ app:
     redirect-url: ${FRONTEND_REDIRECT_URL:http://localhost:3000/}
   cookie:
     secure: ${COOKIE_SECURE:false}
+    domain: ${COOKIE_DOMAIN:}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false

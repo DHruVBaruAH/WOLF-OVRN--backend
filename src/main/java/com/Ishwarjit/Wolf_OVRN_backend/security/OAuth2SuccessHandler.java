@@ -24,16 +24,19 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserRepository userRepository;
     private final String frontendRedirectUrl;
     private final boolean cookieSecure;
+    private final String cookieDomain;
 
     public OAuth2SuccessHandler(
             JwtService jwtService,
             UserRepository userRepository,
             @Value("${app.frontend.redirect-url}") String frontendRedirectUrl,
-            @Value("${app.cookie.secure}") boolean cookieSecure) {
+            @Value("${app.cookie.secure}") boolean cookieSecure,
+            @Value("${app.cookie.domain:}") String cookieDomain) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.frontendRedirectUrl = frontendRedirectUrl;
         this.cookieSecure = cookieSecure;
+        this.cookieDomain = cookieDomain;
     }
 
     @Override
@@ -56,9 +59,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         Cookie cookie = new Cookie(JwtAuthenticationFilter.COOKIE_NAME, token);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/");
-        cookie.setDomain("ovrn.in");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         cookie.setMaxAge((int) (jwtService.getExpirationMs() / 1000));
         cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
