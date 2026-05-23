@@ -16,17 +16,24 @@ public class JwtService {
 
     private final SecretKey signingKey;
     private final long expirationMs;
+    private final long refreshExpirationMs;
 
     public JwtService(
             @Value("${app.jwt.secret}") String base64Secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs) {
+            @Value("${app.jwt.expiration-ms}") long expirationMs,
+            @Value("${app.jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         byte[] keyBytes = Base64.getDecoder().decode(base64Secret);
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
+        this.refreshExpirationMs = refreshExpirationMs;
     }
 
     public long getExpirationMs() {
         return expirationMs;
+    }
+
+    public long getRefreshExpirationMs() {
+        return refreshExpirationMs;
     }
 
     public String generateToken(User user) {
@@ -36,6 +43,19 @@ public class JwtService {
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
+                .claim("type", "access")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(signingKey, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public String generateRefreshToken(User user) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshExpirationMs);
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey, Jwts.SIG.HS256)

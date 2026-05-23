@@ -24,9 +24,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String COOKIE_NAME = "auth_token";
 
     private final JwtService jwtService;
+    private final boolean cookieSecure;
+    private final String cookieDomain;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            @org.springframework.beans.factory.annotation.Value("${app.cookie.secure}") boolean cookieSecure,
+            @org.springframework.beans.factory.annotation.Value("${app.cookie.domain:}") String cookieDomain) {
         this.jwtService = jwtService;
+        this.cookieSecure = cookieSecure;
+        this.cookieDomain = cookieDomain;
     }
 
     @Override
@@ -41,6 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 Claims claims = jwtService.parse(token);
+                String type = claims.get("type", String.class);
+                if (type != null && !"access".equals(type)) {
+                    throw new JwtException("Invalid token type");
+                }
                 String userId = claims.getSubject();
                 String role = claims.get("role", String.class);
 
@@ -54,6 +65,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException ex) {
                 SecurityContextHolder.clearContext();
+                Cookie cookie = new Cookie(COOKIE_NAME, "");
+                cookie.setHttpOnly(true);
+                cookie.setSecure(cookieSecure);
+                cookie.setPath("/");
+                if (cookieDomain != null && !cookieDomain.isBlank()) {
+                    cookie.setDomain(cookieDomain);
+                }
+                cookie.setMaxAge(0);
+                cookie.setAttribute("SameSite", "Lax");
+                response.addCookie(cookie);
             }
         }
 

@@ -56,6 +56,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .orElseThrow(() -> new ResourceNotFoundException("User not found after OAuth login"));
 
         String token = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
 
         Cookie cookie = new Cookie(JwtAuthenticationFilter.COOKIE_NAME, token);
         cookie.setHttpOnly(true);
@@ -67,6 +68,17 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         cookie.setMaxAge((int) (jwtService.getExpirationMs() / 1000));
         cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
+
+        Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(cookieSecure);
+        refreshCookie.setPath("/api/auth/refresh");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            refreshCookie.setDomain(cookieDomain);
+        }
+        refreshCookie.setMaxAge((int) (jwtService.getRefreshExpirationMs() / 1000));
+        refreshCookie.setAttribute("SameSite", "Lax");
+        response.addCookie(refreshCookie);
 
         getRedirectStrategy().sendRedirect(request, response, frontendRedirectUrl);
     }
