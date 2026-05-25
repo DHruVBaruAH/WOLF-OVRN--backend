@@ -4,8 +4,10 @@ import com.Ishwarjit.Wolf_OVRN_backend.dto.ApiResponse;
 import com.Ishwarjit.Wolf_OVRN_backend.dto.InquiryRequest;
 import com.Ishwarjit.Wolf_OVRN_backend.dto.InquiryResponse;
 import com.Ishwarjit.Wolf_OVRN_backend.dto.InquiryStatusUpdateRequest;
+import com.Ishwarjit.Wolf_OVRN_backend.dto.UserInquiriesGroupResponse;
 import com.Ishwarjit.Wolf_OVRN_backend.service.ProductInquiryService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +52,11 @@ public class ProductInquiryController {
         UUID userId = UUID.fromString(currentUserId());
         InquiryResponse response = inquiryService.createInquiry(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
+    }
+
+    @GetMapping("/grouped")
+    public ResponseEntity<ApiResponse<List<UserInquiriesGroupResponse>>> getGroupedInquiries() {
+        return ResponseEntity.ok(ApiResponse.ok(inquiryService.getGroupedInquiries()));
     }
 
     @GetMapping
