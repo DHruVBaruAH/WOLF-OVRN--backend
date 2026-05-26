@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +74,19 @@ public class ProductService {
         List<ProductImage> images = productImageRepository
                 .findByProductIdOrderByDisplayOrderAsc(id);
         return ProductDetailResponse.from(product, images);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductSummaryResponse> getRelatedProducts(UUID productId) {
+        // Fetch 4 related products by category
+        Pageable limit = PageRequest.of(0, 4);
+        Page<Product> relatedPage = productRepository.findRelatedProducts(productId, limit);
+        
+        return relatedPage.map(product -> {
+            List<ProductImage> images = productImageRepository
+                    .findByProductIdOrderByDisplayOrderAsc(product.getId());
+            return ProductSummaryResponse.from(product, images);
+        }).toList();
     }
 
     @Transactional

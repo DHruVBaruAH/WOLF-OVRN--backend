@@ -67,6 +67,17 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/{slug}/related")
+    public ResponseEntity<ApiResponse<List<ProductSummaryResponse>>> getRelated(@PathVariable String slug) {
+        UUID id;
+        try {
+            id = UUID.fromString(slug);
+        } catch (IllegalArgumentException e) {
+            id = productService.getBySlug(slug).id();
+        }
+        return ResponseEntity.ok(ApiResponse.ok(productService.getRelatedProducts(id)));
+    }
+
     @PostMapping(consumes = "application/json")
     public ResponseEntity<ApiResponse<ProductDetailResponse>> createJson(@Valid @RequestBody CreateProductRequest request) {
         ProductDetailResponse created = productService.create(request);

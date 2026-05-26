@@ -14,6 +14,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Page<Order> findByUserId(UUID userId, Pageable pageable);
 
+    Page<Order> findByStatus(com.Ishwarjit.Wolf_OVRN_backend.entity.OrderStatus status, Pageable pageable);
+
     List<Order> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     @org.springframework.data.jpa.repository.Query("SELECT o FROM Order o WHERE o.createdAt >= :startDate")

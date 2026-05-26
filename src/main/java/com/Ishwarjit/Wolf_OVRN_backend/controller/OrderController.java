@@ -40,9 +40,10 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) com.Ishwarjit.Wolf_OVRN_backend.entity.OrderStatus status) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(limit, 1), parseSort(sort));
-        return ResponseEntity.ok(ApiResponse.ok(orderService.getAllOrders(pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(orderService.getAllOrders(status, pageable)));
     }
 
     @GetMapping("/me")

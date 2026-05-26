@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
@@ -24,4 +25,9 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     long countByIsActiveTrue();
 
     List<Product> findByInStockFalse();
+
+    @Query("SELECT DISTINCT p FROM Product p JOIN p.categories c WHERE c.id IN " +
+           "(SELECT c2.id FROM Product p2 JOIN p2.categories c2 WHERE p2.id = :productId) " +
+           "AND p.id != :productId AND p.isActive = true AND p.inStock = true")
+    Page<Product> findRelatedProducts(@org.springframework.data.repository.query.Param("productId") UUID productId, Pageable pageable);
 }
