@@ -16,4 +16,8 @@ public class CartItemRequest {
     @NotNull
     @Min(1)
     private Integer quantity;
+
+    private UUID sizeId;
+
+    private UUID colorId;
 }

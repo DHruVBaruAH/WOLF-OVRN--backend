@@ -36,7 +36,8 @@ public class UpdateProductRequest {
 
     private List<ProductImageRequest> images;
 
-    private List<String> sizes;
+    private List<UUID> sizeIds;
+    private List<UUID> colorIds;
 
     /** Optional — set to a chart UUID to link, or null to explicitly unlink (pass JSON null). */
     private UUID sizeChartId;

@@ -18,7 +18,8 @@ public record ProductDetailResponse(
         boolean isPremium,
         List<CategoryResponse> categories,
         List<ProductImageResponse> images,
-        List<String> sizes,
+        List<SizeDto> sizes,
+        List<ColorDto> colors,
         SizeChartResponse sizeChart) {
 
     public static ProductDetailResponse from(Product product, List<ProductImage> images) {
@@ -28,6 +29,10 @@ public record ProductDetailResponse(
         List<ProductImageResponse> imageDtos = images.stream()
                 .map(ProductImageResponse::from)
                 .toList();
+        List<SizeDto> sizeDtos = product.getSizes() == null ? List.of() :
+                product.getSizes().stream().map(SizeDto::from).toList();
+        List<ColorDto> colorDtos = product.getColors() == null ? List.of() :
+                product.getColors().stream().map(ColorDto::from).toList();
         SizeChartResponse sizeChart = product.getSizeChart() != null
                 ? SizeChartResponse.from(product.getSizeChart())
                 : null;
@@ -43,7 +48,8 @@ public record ProductDetailResponse(
                 Boolean.TRUE.equals(product.getIsPremium()),
                 categories,
                 imageDtos,
-                product.getAvailableSizes(),
+                sizeDtos,
+                colorDtos,
                 sizeChart);
     }
 }

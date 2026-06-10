@@ -11,10 +11,14 @@ import com.Ishwarjit.Wolf_OVRN_backend.entity.Category;
 import com.Ishwarjit.Wolf_OVRN_backend.entity.Product;
 import com.Ishwarjit.Wolf_OVRN_backend.entity.ProductImage;
 import com.Ishwarjit.Wolf_OVRN_backend.entity.SizeChart;
+import com.Ishwarjit.Wolf_OVRN_backend.entity.Color;
+import com.Ishwarjit.Wolf_OVRN_backend.entity.Size;
 import com.Ishwarjit.Wolf_OVRN_backend.exception.ResourceNotFoundException;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.CategoryRepository;
+import com.Ishwarjit.Wolf_OVRN_backend.repository.ColorRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.ProductImageRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.ProductRepository;
+import com.Ishwarjit.Wolf_OVRN_backend.repository.SizeRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.util.SlugUtils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
@@ -38,18 +42,24 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final SizeChartService sizeChartService;
     private final CloudinaryService cloudinaryService;
+    private final ColorRepository colorRepository;
+    private final SizeRepository sizeRepository;
 
     public ProductService(
             ProductRepository productRepository,
             CategoryRepository categoryRepository,
             ProductImageRepository productImageRepository,
             SizeChartService sizeChartService,
-            CloudinaryService cloudinaryService) {
+            CloudinaryService cloudinaryService,
+            ColorRepository colorRepository,
+            SizeRepository sizeRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productImageRepository = productImageRepository;
         this.sizeChartService = sizeChartService;
         this.cloudinaryService = cloudinaryService;
+        this.colorRepository = colorRepository;
+        this.sizeRepository = sizeRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -58,9 +68,9 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> list(
-            String search, String categorySlug, Boolean isPremium,
+            String search, List<UUID> categoryIds, List<UUID> sizeIds, List<UUID> colorIds, Boolean isPremium,
             java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, Pageable pageable) {
-        Specification<Product> spec = buildSpecification(search, categorySlug, isPremium, minPrice, maxPrice);
+        Specification<Product> spec = buildSpecification(search, categoryIds, sizeIds, colorIds, isPremium, minPrice, maxPrice);
         return productRepository.findAll(spec, pageable).map(product -> {
             List<ProductImage> images = productImageRepository
                     .findByProductIdOrderByDisplayOrderAsc(product.getId());
@@ -113,8 +123,20 @@ public class ProductService {
         product.setIsActive(true);
         product.setIsPremium(Boolean.TRUE.equals(request.getIsPremium()));
 
-        if (request.getSizes() != null) {
-            product.setAvailableSizes(request.getSizes());
+        if (request.getColorIds() != null && !request.getColorIds().isEmpty()) {
+            List<Color> colors = colorRepository.findAllById(request.getColorIds());
+            if (colors.size() != request.getColorIds().size()) {
+                throw new ResourceNotFoundException("One or more colors not found");
+            }
+            product.setColors(colors);
+        }
+
+        if (request.getSizeIds() != null && !request.getSizeIds().isEmpty()) {
+            List<Size> sizes = sizeRepository.findAllById(request.getSizeIds());
+            if (sizes.size() != request.getSizeIds().size()) {
+                throw new ResourceNotFoundException("One or more sizes not found");
+            }
+            product.setSizes(sizes);
         }
 
         validatePrices(request.getSellingPrice(), request.getMarkedPrice());
@@ -163,7 +185,22 @@ public class ProductService {
         if (request.getInStock() != null)      product.setInStock(request.getInStock());
         if (request.getIsActive() != null)     product.setIsActive(request.getIsActive());
         if (request.getIsPremium() != null)    product.setIsPremium(request.getIsPremium());
-        if (request.getSizes() != null)        product.setAvailableSizes(request.getSizes());
+
+        if (request.getColorIds() != null) {
+            List<Color> colors = colorRepository.findAllById(request.getColorIds());
+            if (colors.size() != request.getColorIds().size()) {
+                throw new ResourceNotFoundException("One or more colors not found");
+            }
+            product.setColors(colors);
+        }
+
+        if (request.getSizeIds() != null) {
+            List<Size> sizes = sizeRepository.findAllById(request.getSizeIds());
+            if (sizes.size() != request.getSizeIds().size()) {
+                throw new ResourceNotFoundException("One or more sizes not found");
+            }
+            product.setSizes(sizes);
+        }
 
         validatePrices(
                 request.getSellingPrice() != null ? request.getSellingPrice() : product.getSellingPrice(),
@@ -314,7 +351,7 @@ public class ProductService {
     }
 
     private Specification<Product> buildSpecification(
-            String search, String categorySlug, Boolean isPremium,
+            String search, List<UUID> categoryIds, List<UUID> sizeIds, List<UUID> colorIds, Boolean isPremium,
             java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -328,9 +365,17 @@ public class ProductService {
                 }
                 predicates.add(cb.or(termPredicates));
             }
-            if (categorySlug != null && !categorySlug.isBlank()) {
+            if (categoryIds != null && !categoryIds.isEmpty()) {
                 Join<Product, Category> join = root.join("categories");
-                predicates.add(cb.equal(join.get("slug"), categorySlug));
+                predicates.add(join.get("id").in(categoryIds));
+            }
+            if (sizeIds != null && !sizeIds.isEmpty()) {
+                Join<Product, Size> join = root.join("sizes");
+                predicates.add(join.get("id").in(sizeIds));
+            }
+            if (colorIds != null && !colorIds.isEmpty()) {
+                Join<Product, Color> join = root.join("colors");
+                predicates.add(join.get("id").in(colorIds));
             }
             if (isPremium != null) predicates.add(cb.equal(root.get("isPremium"), isPremium));
             if (minPrice != null)  predicates.add(cb.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice));

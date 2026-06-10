@@ -39,7 +39,8 @@ public class CreateProductRequest {
 
     private List<ProductImageRequest> images;
 
-    private List<String> sizes;
+    private List<UUID> sizeIds;
+    private List<UUID> colorIds;
 
     /** Optional — links this product to a global size chart by its UUID. */
     private UUID sizeChartId;

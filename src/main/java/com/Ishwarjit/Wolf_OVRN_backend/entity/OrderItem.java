@@ -51,8 +51,11 @@ public class OrderItem {
     @Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
 
-    @Column(name = "size", length = 20)
+    @Column(name = "size", length = 50)
     private String size;
+
+    @Column(name = "color", length = 50)
+    private String color;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

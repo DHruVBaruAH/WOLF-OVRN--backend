@@ -13,12 +13,16 @@ public class CartItemResponse {
     private final ProductSummaryResponse product;
     private final int quantity;
     private final BigDecimal subtotal;
+    private final String size;
+    private final String color;
 
-    private CartItemResponse(UUID cartItemId, ProductSummaryResponse product, int quantity, BigDecimal subtotal) {
+    private CartItemResponse(UUID cartItemId, ProductSummaryResponse product, int quantity, BigDecimal subtotal, String size, String color) {
         this.cartItemId = cartItemId;
         this.product = product;
         this.quantity = quantity;
         this.subtotal = subtotal;
+        this.size = size;
+        this.color = color;
     }
 
     public static CartItemResponse from(CartItem item) {
@@ -29,6 +33,8 @@ public class CartItemResponse {
                 item.getId(),
                 ProductSummaryResponse.from(product, product.getImages()),
                 item.getQuantity(),
-                subtotal);
+                subtotal,
+                item.getSize(),
+                item.getColor());
     }
 }

@@ -57,9 +57,7 @@ public class Order {
     @Column(name = "shipping_address", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> shippingAddress;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "billing_address", columnDefinition = "jsonb")
-    private Map<String, Object> billingAddress;
+
 
     @Column(name = "tracking_number")
     private String trackingNumber;

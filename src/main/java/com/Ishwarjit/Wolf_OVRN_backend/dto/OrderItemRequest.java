@@ -16,4 +16,8 @@ public class OrderItemRequest {
     @NotNull
     @Min(1)
     private Integer quantity;
+
+    private UUID sizeId;
+
+    private UUID colorId;
 }

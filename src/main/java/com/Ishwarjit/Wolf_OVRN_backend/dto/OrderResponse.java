@@ -13,7 +13,7 @@ public record OrderResponse(
         String status,
         BigDecimal totalAmount,
         Object shippingAddress,
-        Object billingAddress,
+
         String trackingNumber,
         String notes,
         List<OrderItemResponse> items,
@@ -30,7 +30,7 @@ public record OrderResponse(
                 order.getStatus().name(),
                 order.getTotalAmount(),
                 order.getShippingAddress(),
-                order.getBillingAddress(),
+
                 order.getTrackingNumber(),
                 order.getNotes(),
                 itemDtos,

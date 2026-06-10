@@ -19,7 +19,7 @@ public class CreateOrderRequest {
     @NotNull
     private Object shippingAddress;
 
-    private Object billingAddress;
+
 
     private String notes;
 }

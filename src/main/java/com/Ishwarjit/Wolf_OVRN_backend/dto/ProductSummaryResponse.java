@@ -17,13 +17,18 @@ public record ProductSummaryResponse(
         boolean isActive,
         boolean isPremium,
         String primaryImageUrl,
-        List<String> availableSizes,
+        List<SizeDto> sizes,
+        List<ColorDto> colors,
         List<CategoryResponse> categories,
         String description) {
 
     public static ProductSummaryResponse from(Product product, String primaryImageUrl) {
         List<CategoryResponse> categoryResponses = product.getCategories() == null ? List.of() : 
             product.getCategories().stream().map(CategoryResponse::from).collect(Collectors.toList());
+        List<SizeDto> sizeResponses = product.getSizes() == null ? List.of() :
+            product.getSizes().stream().map(SizeDto::from).collect(Collectors.toList());
+        List<ColorDto> colorResponses = product.getColors() == null ? List.of() :
+            product.getColors().stream().map(ColorDto::from).collect(Collectors.toList());
 
         return new ProductSummaryResponse(
                 product.getId(),
@@ -35,7 +40,8 @@ public record ProductSummaryResponse(
                 Boolean.TRUE.equals(product.getIsActive()),
                 Boolean.TRUE.equals(product.getIsPremium()),
                 primaryImageUrl,
-                product.getAvailableSizes() == null ? List.of() : product.getAvailableSizes(),
+                sizeResponses,
+                colorResponses,
                 categoryResponses,
                 product.getDescription());
     }

@@ -43,18 +43,18 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(cart));
     }
 
-    @PatchMapping("/items/{productId}")
+    @PatchMapping("/items/{cartItemId}")
     public ResponseEntity<ApiResponse<CartResponse>> updateItem(
-            @PathVariable UUID productId,
+            @PathVariable UUID cartItemId,
             @Valid @RequestBody UpdateCartItemRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.ok(cartService.updateItem(currentUserId(), productId, request), "Updated successfully"));
+                ApiResponse.ok(cartService.updateItem(currentUserId(), cartItemId, request), "Updated successfully"));
     }
 
-    @DeleteMapping("/items/{productId}")
-    public ResponseEntity<ApiResponse<CartResponse>> removeItem(@PathVariable UUID productId) {
+    @DeleteMapping("/items/{cartItemId}")
+    public ResponseEntity<ApiResponse<CartResponse>> removeItem(@PathVariable UUID cartItemId) {
         return ResponseEntity.ok(
-                ApiResponse.ok(cartService.removeItem(currentUserId(), productId), "Removed successfully"));
+                ApiResponse.ok(cartService.removeItem(currentUserId(), cartItemId), "Removed successfully"));
     }
 
     @DeleteMapping

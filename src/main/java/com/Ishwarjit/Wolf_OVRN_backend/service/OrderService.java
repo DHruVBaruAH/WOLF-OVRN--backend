@@ -64,7 +64,7 @@ public class OrderService {
         order.setUser(user);
         order.setStatus(OrderStatus.PENDING);
         order.setShippingAddress(normalizeAddress(request.getShippingAddress()));
-        order.setBillingAddress(normalizeAddress(request.getBillingAddress()));
+
         order.setNotes(request.getNotes());
 
         BigDecimal total = BigDecimal.ZERO;
@@ -76,6 +76,24 @@ public class OrderService {
             BigDecimal unitPrice = product.getSellingPrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
 
+            String resolvedSize = null;
+            if (itemRequest.getSizeId() != null) {
+                resolvedSize = product.getSizes().stream()
+                        .filter(s -> s.getId().equals(itemRequest.getSizeId()))
+                        .findFirst()
+                        .map(com.Ishwarjit.Wolf_OVRN_backend.entity.Size::getSizeName)
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid size for product"));
+            }
+
+            String resolvedColor = null;
+            if (itemRequest.getColorId() != null) {
+                resolvedColor = product.getColors().stream()
+                        .filter(c -> c.getId().equals(itemRequest.getColorId()))
+                        .findFirst()
+                        .map(com.Ishwarjit.Wolf_OVRN_backend.entity.Color::getColorName)
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid color for product"));
+            }
+
             OrderItem item = new OrderItem();
             item.setOrder(order);
             item.setProduct(product);
@@ -83,6 +101,8 @@ public class OrderService {
             item.setQuantity(itemRequest.getQuantity());
             item.setUnitPrice(unitPrice);
             item.setSubtotal(subtotal);
+            item.setSize(resolvedSize);
+            item.setColor(resolvedColor);
 
             order.getItems().add(item);
             total = total.add(subtotal);

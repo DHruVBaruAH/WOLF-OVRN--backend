@@ -22,9 +22,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "products")
@@ -80,9 +78,21 @@ public class Product {
     @JoinColumn(name = "size_chart_id")
     private SizeChart sizeChart;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "available_sizes", columnDefinition = "jsonb")
-    private List<String> availableSizes = new ArrayList<>();
+    @jakarta.persistence.ManyToMany(fetch = FetchType.LAZY)
+    @jakarta.persistence.JoinTable(
+        name = "product_colors",
+        joinColumns = @JoinColumn(name = "product_id"),
+        inverseJoinColumns = @JoinColumn(name = "color_id")
+    )
+    private List<Color> colors = new ArrayList<>();
+
+    @jakarta.persistence.ManyToMany(fetch = FetchType.LAZY)
+    @jakarta.persistence.JoinTable(
+        name = "product_sizes",
+        joinColumns = @JoinColumn(name = "product_id"),
+        inverseJoinColumns = @JoinColumn(name = "size_id")
+    )
+    private List<Size> sizes = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
