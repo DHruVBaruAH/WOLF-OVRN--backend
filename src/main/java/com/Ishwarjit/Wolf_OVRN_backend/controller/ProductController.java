@@ -262,6 +262,12 @@ public class ProductController {
         if (field.isEmpty()) {
             return Sort.unsorted();
         }
+        
+        // Map common frontend aliases to the actual entity property names
+        if (field.equalsIgnoreCase("price")) {
+            field = "sellingPrice";
+        }
+        
         Sort.Direction direction = Sort.Direction.ASC;
         if (parts.length > 1) {
             String dir = parts[1].trim();
