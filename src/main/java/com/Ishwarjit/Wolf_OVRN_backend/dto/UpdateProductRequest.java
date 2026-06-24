@@ -44,4 +44,9 @@ public class UpdateProductRequest {
 
     /** When true, clears the size chart link even if sizeChartId is not provided. */
     private Boolean clearSizeChart;
+
+    private UUID fitId;
+
+    /** When true, clears the fit link even if fitId is not provided. */
+    private Boolean clearFit;
 }

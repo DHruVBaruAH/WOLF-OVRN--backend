@@ -57,6 +57,8 @@ public class ProductController {
             @RequestParam(required = false) String sizeIds,
             @RequestParam(required = false) String colors,
             @RequestParam(required = false) String colorIds,
+            @RequestParam(required = false) String fits,
+            @RequestParam(required = false) String fitIds,
             @RequestParam(required = false) Boolean isPremium,
             @RequestParam(required = false) java.math.BigDecimal minPrice,
             @RequestParam(required = false) java.math.BigDecimal maxPrice,
@@ -68,9 +70,10 @@ public class ProductController {
         List<String> parsedCategories = parseStringList(categoryIds != null ? categoryIds : category);
         List<String> parsedSizes = parseStringList(sizeIds != null ? sizeIds : sizes);
         List<String> parsedColors = parseStringList(colorIds != null ? colorIds : colors);
+        List<String> parsedFits = parseStringList(fitIds != null ? fitIds : fits);
         
         return ResponseEntity.ok(ApiResponse.ok(productService.list(
-                effectiveSearch, parsedCategories, parsedSizes, parsedColors, isPremium, minPrice, maxPrice, pageable)));
+                effectiveSearch, parsedCategories, parsedSizes, parsedColors, parsedFits, isPremium, minPrice, maxPrice, pageable)));
     }
 
     private List<String> parseStringList(String param) {

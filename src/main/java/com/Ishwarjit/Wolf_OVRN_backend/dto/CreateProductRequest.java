@@ -44,4 +44,6 @@ public class CreateProductRequest {
 
     /** Optional — links this product to a global size chart by its UUID. */
     private UUID sizeChartId;
+
+    private UUID fitId;
 }

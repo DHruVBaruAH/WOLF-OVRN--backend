@@ -20,7 +20,8 @@ public record ProductSummaryResponse(
         List<SizeDto> sizes,
         List<ColorDto> colors,
         List<CategoryResponse> categories,
-        String description) {
+        String description,
+        FitDto fit) {
 
     public static ProductSummaryResponse from(Product product, String primaryImageUrl) {
         List<CategoryResponse> categoryResponses = product.getCategories() == null ? List.of() : 
@@ -29,6 +30,7 @@ public record ProductSummaryResponse(
             product.getSizes().stream().map(SizeDto::from).collect(Collectors.toList());
         List<ColorDto> colorResponses = product.getColors() == null ? List.of() :
             product.getColors().stream().map(ColorDto::from).collect(Collectors.toList());
+        FitDto fitDto = product.getFit() != null ? FitDto.from(product.getFit()) : null;
 
         return new ProductSummaryResponse(
                 product.getId(),
@@ -43,7 +45,8 @@ public record ProductSummaryResponse(
                 sizeResponses,
                 colorResponses,
                 categoryResponses,
-                product.getDescription());
+                product.getDescription(),
+                fitDto);
     }
 
     public static ProductSummaryResponse from(Product product, List<ProductImage> images) {

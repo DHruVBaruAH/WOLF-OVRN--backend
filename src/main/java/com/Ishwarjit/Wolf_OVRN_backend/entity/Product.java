@@ -78,6 +78,10 @@ public class Product {
     @JoinColumn(name = "size_chart_id")
     private SizeChart sizeChart;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fit_id")
+    private Fit fit;
+
     @jakarta.persistence.ManyToMany(fetch = FetchType.LAZY)
     @jakarta.persistence.JoinTable(
         name = "product_colors",

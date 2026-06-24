@@ -16,6 +16,7 @@ import com.Ishwarjit.Wolf_OVRN_backend.entity.Size;
 import com.Ishwarjit.Wolf_OVRN_backend.exception.ResourceNotFoundException;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.CategoryRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.ColorRepository;
+import com.Ishwarjit.Wolf_OVRN_backend.repository.FitRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.ProductImageRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.ProductRepository;
 import com.Ishwarjit.Wolf_OVRN_backend.repository.SizeRepository;
@@ -44,6 +45,7 @@ public class ProductService {
     private final CloudinaryService cloudinaryService;
     private final ColorRepository colorRepository;
     private final SizeRepository sizeRepository;
+    private final FitRepository fitRepository;
 
     public ProductService(
             ProductRepository productRepository,
@@ -52,7 +54,8 @@ public class ProductService {
             SizeChartService sizeChartService,
             CloudinaryService cloudinaryService,
             ColorRepository colorRepository,
-            SizeRepository sizeRepository) {
+            SizeRepository sizeRepository,
+            FitRepository fitRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productImageRepository = productImageRepository;
@@ -60,6 +63,7 @@ public class ProductService {
         this.cloudinaryService = cloudinaryService;
         this.colorRepository = colorRepository;
         this.sizeRepository = sizeRepository;
+        this.fitRepository = fitRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -68,9 +72,9 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> list(
-            String search, List<String> categories, List<String> sizes, List<String> colors, Boolean isPremium,
+            String search, List<String> categories, List<String> sizes, List<String> colors, List<String> fits, Boolean isPremium,
             java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, Pageable pageable) {
-        Specification<Product> spec = buildSpecification(search, categories, sizes, colors, isPremium, minPrice, maxPrice);
+        Specification<Product> spec = buildSpecification(search, categories, sizes, colors, fits, isPremium, minPrice, maxPrice);
         return productRepository.findAll(spec, pageable).map(product -> {
             List<ProductImage> images = productImageRepository
                     .findByProductIdOrderByDisplayOrderAsc(product.getId());
@@ -155,6 +159,12 @@ public class ProductService {
             product.setSizeChart(chart);
         }
 
+        if (request.getFitId() != null) {
+            com.Ishwarjit.Wolf_OVRN_backend.entity.Fit fit = fitRepository.findById(request.getFitId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Fit not found"));
+            product.setFit(fit);
+        }
+
         Product saved = productRepository.save(product);
 
         List<ProductImage> savedImages = new ArrayList<>();
@@ -220,6 +230,15 @@ public class ProductService {
         } else if (request.getSizeChartId() != null) {
             SizeChart chart = sizeChartService.getEntityOrThrow(request.getSizeChartId());
             product.setSizeChart(chart);
+        }
+
+        // Fit link: set, clear, or leave unchanged
+        if (Boolean.TRUE.equals(request.getClearFit())) {
+            product.setFit(null);
+        } else if (request.getFitId() != null) {
+            com.Ishwarjit.Wolf_OVRN_backend.entity.Fit fit = fitRepository.findById(request.getFitId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Fit not found"));
+            product.setFit(fit);
         }
 
         Product saved = productRepository.save(product);
@@ -351,7 +370,7 @@ public class ProductService {
     }
 
     private Specification<Product> buildSpecification(
-            String search, List<String> categories, List<String> sizes, List<String> colors, Boolean isPremium,
+            String search, List<String> categories, List<String> sizes, List<String> colors, List<String> fits, Boolean isPremium,
             java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -403,6 +422,19 @@ public class ProductService {
                     }
                 }
                 predicates.add(cb.or(colorPredicates.toArray(new Predicate[0])));
+            }
+            if (fits != null && !fits.isEmpty()) {
+                Join<Product, com.Ishwarjit.Wolf_OVRN_backend.entity.Fit> join = root.join("fit");
+                List<Predicate> fitPredicates = new ArrayList<>();
+                for (String fit : fits) {
+                    try {
+                        UUID id = UUID.fromString(fit);
+                        fitPredicates.add(cb.equal(join.get("id"), id));
+                    } catch (IllegalArgumentException e) {
+                        fitPredicates.add(cb.equal(cb.lower(join.get("name")), fit.toLowerCase()));
+                    }
+                }
+                predicates.add(cb.or(fitPredicates.toArray(new Predicate[0])));
             }
             if (isPremium != null) predicates.add(cb.equal(root.get("isPremium"), isPremium));
             if (minPrice != null)  predicates.add(cb.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice));

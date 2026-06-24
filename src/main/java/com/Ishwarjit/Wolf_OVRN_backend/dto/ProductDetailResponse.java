@@ -20,7 +20,8 @@ public record ProductDetailResponse(
         List<ProductImageResponse> images,
         List<SizeDto> sizes,
         List<ColorDto> colors,
-        SizeChartResponse sizeChart) {
+        SizeChartResponse sizeChart,
+        FitDto fit) {
 
     public static ProductDetailResponse from(Product product, List<ProductImage> images) {
         List<CategoryResponse> categories = product.getCategories().stream()
@@ -36,6 +37,7 @@ public record ProductDetailResponse(
         SizeChartResponse sizeChart = product.getSizeChart() != null
                 ? SizeChartResponse.from(product.getSizeChart())
                 : null;
+        FitDto fitDto = product.getFit() != null ? FitDto.from(product.getFit()) : null;
         return new ProductDetailResponse(
                 product.getId(),
                 product.getName(),
@@ -50,6 +52,7 @@ public record ProductDetailResponse(
                 imageDtos,
                 sizeDtos,
                 colorDtos,
-                sizeChart);
+                sizeChart,
+                fitDto);
     }
 }
