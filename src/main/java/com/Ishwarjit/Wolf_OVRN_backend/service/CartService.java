@@ -76,6 +76,8 @@ public class CartService {
                     .findFirst()
                     .map(com.Ishwarjit.Wolf_OVRN_backend.entity.Size::getSizeName)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid size for product"));
+        } else if (!product.getSizes().isEmpty()) {
+            throw new IllegalArgumentException("Size is required for product: " + product.getName());
         }
 
         String resolvedColor = null;
@@ -85,6 +87,8 @@ public class CartService {
                     .findFirst()
                     .map(com.Ishwarjit.Wolf_OVRN_backend.entity.Color::getColorName)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid color for product"));
+        } else if (!product.getColors().isEmpty()) {
+            throw new IllegalArgumentException("Color is required for product: " + product.getName());
         }
 
         List<CartItem> items = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId());
